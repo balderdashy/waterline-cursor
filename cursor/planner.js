@@ -3,23 +3,74 @@
  */
 
 var _ = require('lodash');
+var async = require('async');
 var strategies = require('./strategies');
 
-// ------------------------- (((•))) ------------------------- //
-//
-// Step 1:
-// Plan the query.
-//
+/**
+ * Expand a set of join instructions into a stategy based instruction set.
+ *
+ */
 
-module.exports = function planQuery(options) {
+var StrategyPlanner = module.exports = function StrategyPlanner(options) {
+  this.$getPK = options.$getPK;
+  return this;
+};
 
-  if(!options) {
+
+/**
+ * Given a set of associations, attach meta data to each one with the strategy type.
+ *
+ */
+
+StrategyPlanner.prototype.plan = function plan(criteria) {
+
+  var self = this;
+  var groupedAssociations = this.groupAssociations(criteria);
+
+  _.keys(groupedAssociations).forEach(function(key) {
+
+    var instructions = _.cloneDeep(groupedAssociations[key]);
+    var strategy = self.determineStrategy(groupedAssociations[key]);
+
+    // Overwrite the grouped associations and insert the strategy and original instructions
+    groupedAssociations[key] = {
+      strategy: strategy,
+      instructions: instructions
+    };
+
+  });
+
+  // Replace joins with the newly created instructions
+  criteria.instructions = groupedAssociations;
+  delete criteria.joins;
+
+  return criteria;
+};
+
+
+/**
+ * Given a criteria object, group the joins by alias.
+ *
+ */
+
+StrategyPlanner.prototype.groupAssociations = function groupAssociations(criteria) {
+  return _.groupBy(criteria.joins, 'alias');
+};
+
+
+/**
+ * Figure out a strategy for a specific set of options.
+ *
+ *
+ */
+
+StrategyPlanner.prototype.determineStrategy = function determineStrategy(instructions) {
+
+  var self = this;
+
+  if(!instructions) {
     throw new Error('Missing options when planning the query');
   }
-
-  // Cache important values from options
-  var $getPK = options.$getPK;
-  var instructions = options.instructions;
 
   // Lookup relevant collection identities and primary keys
   var parentIdentity = _.first(instructions).parent;
@@ -35,8 +86,8 @@ module.exports = function planQuery(options) {
   }
 
   // Calculate the parent and child primary keys
-  var parentPK = $getPK(parentIdentity);
-  var childPK = $getPK(childIdentity);
+  var parentPK = this.$getPK(parentIdentity);
+  var childPK = this.$getPK(childIdentity);
 
   // Lookup the base child criteria
   // (populate..where, populate..limit, etc.)
@@ -83,7 +134,7 @@ module.exports = function planQuery(options) {
   // will only be meaningful if this is the `VIA_JUNCTOR` strategy.
   if(strategy === strategies.VIA_JUNCTOR) {
     meta.junctorIdentity = instructions[0].child;
-    meta.junctorPK = $getPK(instructions[0].child);
+    meta.junctorPK = self.$getPK(instructions[0].child);
     meta.junctorFKToParent = instructions[0].childKey;
     meta.junctorFKToChild = instructions[1] && instructions[1].parentKey;
   }
@@ -92,5 +143,4 @@ module.exports = function planQuery(options) {
     strategy: strategy,
     meta: meta
   };
-
 };

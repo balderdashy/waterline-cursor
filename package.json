@@ -14,7 +14,6 @@
   "author": "Mike McNeil",
   "license": "MIT",
   "dependencies": {
-    "merge-defaults": "~0.2.1",
     "async": "~0.9.0",
     "lodash": "~2.4.1"
   }

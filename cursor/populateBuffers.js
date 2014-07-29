@@ -1,138 +1,163 @@
 /**
- * Module dependencies
+ * Module Dependencies
  */
 
 var _ = require('lodash');
+var async = require('async');
 var strategies = require('./strategies');
 
 /**
- * Default populateBuffers logic. Can be overridden in an adapter.
+ * Default populateBuffers implementation. Should be good to go on most noSql datastores.
  */
 
 module.exports = function populateBuffers(options, cb) {
 
+  var $find = options.$find;
+  var $getPK = options.$getPK;
+  var parentCollection = options.parentCollection;
   var buffers = options.buffers;
-  var childCriteria = options.childCriteria;
-  var childIdentity = options.childIdentity;
+  var instructions = options.instructions;
 
-  // IMPORTANT:
-  // If the child criteria has a `sort`, `limit`, or `skip`, then we must execute
-  // N child queries; where N is the number of parent results.
-  // Otherwise the result set will not be accurate.
-  var canCombineChildQueries = !!(
-    childCriteria.sort  ||
-    childCriteria.limit ||
-    childCriteria.skip
-  );
+  var parentRecords = [];
+  var cachedChildren = {};
 
-  // SKIP THIS STEP ENTIRELY FOR NOW
-  // TODO: implement this optimization
-  canCombineChildQueries = false;
+  async.auto({
 
+    // Grab the parent records for the query
+    processParent: function(next) {
+      var parentCriteria = _.cloneDeep(options.instructions);
+      delete parentCriteria.instructions;
 
-
-  if (canCombineChildQueries) {
-
-    // Special case for VIA_JUNCTOR:
-    if (strategy === strategies.VIA_JUNCTOR) {
-      return next(new Error('via_junctor not implemented yet'));
-    }
-    else {
-      switch (strategy) {
-        case strategies.HAS_FK:
-          _where[childPK] = _.pluck(parentResults, parentFK);
-          return _where;
-        case strategies.VIA_FK:
-          _where[childFK] = _.pluck(parentResults, parentPK);
-          return _where;
-      }
-    }
-    return cb(new Error('not implemented yet!'));
-  }
-
-
-  // Now execute the queries
-  async.each(buffers, function (buffer, next){
-
-    // •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-    // NOTE:
-    // This step could be optimized by calculating the query function
-    // ahead of time since we already know the association strategy it
-    // will use before runtime.
-    // •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-
-    // Special case for VIA_JUNCTOR:
-    if (strategy === strategies.VIA_JUNCTOR) {
-
-      // NOTE:
-      // (TODO: look at optimizing this later)
-      // I think for this strategy we can always find all of the junctor
-      // records relating to ANY of the parent records ahead of time, and
-      // the `canCombineChildQueries` distinction is really just limited
-      // to that third [set of] quer[ies/y].  For now, we just do a separate
-      // query to the junctor for each parent record to keep things tight.
-      var junctorCriteria = {where:{}};
-      junctorCriteria.where[junctorFKToParent] = buffer.belongsToPKValue;
-
-      $find( junctorIdentity, junctorCriteria,
-      function _afterFetchingJunctorRecords(err, junctorRecordsForThisBuffer) {
-        if (err) return next(err);
-
-        // Build criteria to find matching child records which are also
-        // related to ANY of the junctor records we just fetched.
-        var bufferChildCriteria = _defaultsDeep((function _buildBufferCriteriaChangeset (_criteria) {
-          _criteria.where[childPK] = _.pluck(junctorRecordsForThisBuffer, junctorFKToChild);
-          return _criteria;
-        })({where:{}}), childCriteria);
-
-        // Now find related child records
-        $find( childIdentity, bufferChildCriteria,
-        function _afterFetchingRelatedChildRecords(err, childRecordsForThisBuffer) {
-          if (err) return next(err);
-
-          buffer.records = childRecordsForThisBuffer;
-          return next();
-        });
+      $find(parentCollection, parentCriteria, function(err, results) {
+        if(err) return next(err);
+        parentRecords = results;
+        buffers.parents = parentRecords;
+        next();
       });
+    },
 
-    }
-    // General case for the other strategies:
-    else {
 
-      var criteriaToPopulateBuffer =
-      _defaultsDeep((function _buildBufferCriteriaChangeset () {
-        return {
-          where: (function _buildBufferWHERE (_where){
-            switch (strategy) {
-              case strategies.HAS_FK:
-                _where[childPK] = buffer.belongsToFKValue;
-                return _where;
-              case strategies.VIA_FK:
-                _where[childFK] = buffer.belongsToPKValue;
-                return _where;
-            }
-          })({})
-        };
-      })(), childCriteria);
+    // Build child buffers.
+    // For each instruction, loop through the parent records and build up a
+    // buffer for the record.
+    buildChildBuffers: ['processParent', function(next, results) {
+      async.each(_.keys(instructions.instructions), function(population, nextPop) {
 
-      // console.log(
-      //   'Populating buffer for parent record "%s" using the following criteria: \n',
-      //   buffer.belongsToPKValue,
-      //   util.inspect(criteriaToPopulateBuffer, false, null)
-      // );
+        var popInstructions = instructions.instructions[population].instructions;
+        var pk = $getPK(popInstructions[0].parent);
 
-      $find( childIdentity, criteriaToPopulateBuffer,
-      function _afterFetchingBufferRecords(err, childRecordsForThisBuffer) {
-        if (err) return next(err);
+        // Use eachSeries here to keep ordering
+        async.eachSeries(parentRecords, function(parent, nextParent) {
+          var buffer = {
+            attrName: population,
+            parentPK: parent[pk],
+            pkAttr: pk
+          };
 
-        // console.log('CHILD RECORDS FOUND FOR THIS BUFFER (%s):',
-        //   attrName,
-        //   util.inspect(childRecordsForThisBuffer, false, null));
+          var strategy = instructions.instructions[population].strategy.strategy;
 
-        buffer.records = childRecordsForThisBuffer;
-        return next();
-      });
-    }
+          if(strategy === strategies.HAS_FK) {
+            buffer.parentFK = parent[instructions.instructions[population].instructions[0].parentKey];
+          }
+
+          buffers.add(buffer);
+          nextParent();
+        }, nextPop);
+
+      }, next);
+    }],
+
+
+    // Process the child results and attach to the buffers
+    processChildren: ['buildChildBuffers', function(next, results) {
+
+      // For each buffer build a query to populate it's children records.
+      async.each(buffers.read(), function (buffer, next) {
+
+        // Get the instruction set
+        var instructionSet = instructions.instructions[buffer.attrName];
+
+        // Cache the strategy
+        var strategy = instructionSet.strategy.strategy;
+
+        var childIdentity;
+
+        // •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+        // NOTE:
+        // This step could be optimized by calculating the query function
+        // ahead of time since we already know the association strategy it
+        // will use before runtime.
+        // •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+
+        // Special case for VIA_JUNCTOR:
+        if (strategy === strategies.VIA_JUNCTOR) {
+
+          var junctorIdentity = instructionSet.instructions[0].child;
+          var junctorPK = $getPK(instructionSet.instructions[0].child);
+          var junctorFKToParent = instructionSet.instructions[0].childKey;
+          var junctorFKToChild = instructionSet.instructions[1] && instructionSet.instructions[1].parentKey;
+
+          childIdentity = instructionSet.instructions[1].child;
+
+          // NOTE:
+          // (TODO: look at optimizing this later)
+          // I think for this strategy we can always find all of the junctor
+          // records relating to ANY of the parent records ahead of time, and
+          // the `canCombineChildQueries` distinction is really just limited
+          // to that third [set of] quer[ies/y].  For now, we just do a separate
+          // query to the junctor for each parent record to keep things tight.
+          var junctorCriteria = {where:{}};
+          junctorCriteria.where[junctorFKToParent] = buffer.belongsToPKValue;
+
+          $find(junctorIdentity, junctorCriteria, function _afterFetchingJunctorRecords(err, junctorRecordsForThisBuffer) {
+            if (err) return next(err);
+
+            // Build criteria to find matching child records which are also
+            // related to ANY of the junctor records we just fetched.
+            var bufferChildCriteria = _.cloneDeep(instructionSet.instructions[1].criteria);
+            var whereObj = {};
+
+            whereObj[instructionSet.instructions[1].childKey] = _.pluck(junctorRecordsForThisBuffer, junctorFKToChild);
+            bufferChildCriteria.where = _.assign(whereObj, bufferChildCriteria.where);
+
+            // Now find related child records
+            $find(childIdentity, bufferChildCriteria, function _afterFetchingRelatedChildRecords(err, childRecordsForThisBuffer) {
+              if (err) return next(err);
+
+              buffer.records = childRecordsForThisBuffer;
+              return next();
+            });
+          });
+
+        }
+
+        // General case for the other strategies:
+        else {
+
+          childIdentity = instructionSet.instructions[0].child;
+          var criteriaToPopulateBuffer = _.cloneDeep(instructionSet.instructions[0].criteria);
+          var whereObj = {};
+
+          switch (strategy) {
+            case strategies.HAS_FK:
+              whereObj[instructionSet.instructions[0].childKey] = buffer.belongsToFKValue;
+              criteriaToPopulateBuffer.where = _.assign(whereObj, criteriaToPopulateBuffer.where);
+              break;
+            case strategies.VIA_FK:
+              whereObj[instructionSet.instructions[0].childKey] = buffer.belongsToPKValue;
+              criteriaToPopulateBuffer.where = _.assign(whereObj, criteriaToPopulateBuffer.where);
+              break;
+          }
+
+          $find(childIdentity, criteriaToPopulateBuffer, function _afterFetchingBufferRecords(err, childRecordsForThisBuffer) {
+            if(err) return next(err);
+            buffer.records = childRecordsForThisBuffer;
+            return next();
+          });
+        }
+
+      }, next);
+    }]
 
   }, cb);
 

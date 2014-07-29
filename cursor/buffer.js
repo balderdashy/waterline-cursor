@@ -11,6 +11,7 @@ var _ = require('lodash');
 var Buffer = module.exports = function() {
 
   this.store = [];
+  this.parents = [];
 
   return this;
 };
@@ -28,11 +29,7 @@ Buffer.prototype.read = function() {
  */
 
 Buffer.prototype.getParents = function() {
-  var parent = _.find(this.store, function(buffer) {
-    return buffer.parent;
-  });
-
-  return parent.records || false;
+  return this.parents;
 };
 
 /**
@@ -51,10 +48,12 @@ Buffer.prototype.add = function(values) {
   values.forEach(function(val) {
     self.store.push({
       attrName: val.attrName,
+      parentPkAttr: val.pkAttr,
+      records: val.records,
       belongsToPKValue: val.parentPK,
 
       // Optional (only used if implementing a HAS_FK strategy)
-      belongsToFKValue: val.parentPK
+      belongsToFKValue: val.parentFK
     });
   });
 
