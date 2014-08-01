@@ -73,33 +73,35 @@ Cursor.prototype.attachRecords = function attachRecords(cb) {
 
   // Read all the records from the buffers
   var bufferedRecords = this.buffers.read();
-
   // If no buffers are used, we are done
   if(bufferedRecords.length === 0) {
     return cb(null, parentRecords);
   }
 
   _.each(bufferedRecords, function (buffer) {
-    if (buffer.records && buffer.records.length) {
 
-      var matchingParentRecord = _.find(parentRecords, function (parentRecord) {
-        return parentRecord[buffer.parentPkAttr] === buffer.belongsToPKValue;
-      });
+    var matchingParentRecord = _.find(parentRecords, function (parentRecord) {
+      return parentRecord[buffer.parentPkAttr] === buffer.belongsToPKValue;
+    });
 
-      // This should always be true, but checking just in case.
-      if (_.isObject(matchingParentRecord)) {
+    // This should always be true, but checking just in case.
+    if (_.isObject(matchingParentRecord)) {
 
-        // If the value in `attrName` for this record is not an array,
-        // it is probably a foreign key value.  Fortunately, at this point
-        // we can go ahead and replace it safely since any logic relying on it
-        // is complete (i.e. although we may still have other queries finishing
-        // up for other association attributes, we're done populating THIS one, see?)
-        //
-        // In fact, and for the same reason, we can safely override the value of
-        // `buffer.attrName` for the parent record at this point, no matter what!
-        // This is nice, because `buffer.records` is already sorted, limited, and
-        // skipped, so we don't have to mess with that.
+      // If the value in `attrName` for this record is not an array,
+      // it is probably a foreign key value.  Fortunately, at this point
+      // we can go ahead and replace it safely since any logic relying on it
+      // is complete (i.e. although we may still have other queries finishing
+      // up for other association attributes, we're done populating THIS one, see?)
+      //
+      // In fact, and for the same reason, we can safely override the value of
+      // `buffer.attrName` for the parent record at this point, no matter what!
+      // This is nice, because `buffer.records` is already sorted, limited, and
+      // skipped, so we don't have to mess with that.
+      // 
+      if (buffer.records && buffer.records.length) { 
         matchingParentRecord[buffer.attrName] = buffer.records;
+      } else {
+        matchingParentRecord[buffer.attrName] = null;
       }
     }
 
