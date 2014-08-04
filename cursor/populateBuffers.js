@@ -118,6 +118,23 @@ module.exports = function populateBuffers(options, cb) {
             var whereObj = {};
 
             whereObj[instructionSet.instructions[1].childKey] = _.pluck(junctorRecordsForThisBuffer, junctorFKToChild);
+
+            var childPK = $getPK(instructionSet.instructions[1].child);
+
+            // Check if the given where contains the primary key. If so pull it out and check that the
+            // value exists in the junctoRecords for this buffer. If so set the array to only contain
+            // that value.
+            if(bufferChildCriteria.where.hasOwnProperty(childPK)) {
+              var pkFilter = _.cloneDeep(bufferChildCriteria.where[childPK]);
+              delete bufferChildCriteria.where[childPK];
+
+              if(!Array.isArray(pkFilter)) {
+                pkFilter = [pkFilter];
+              }
+
+              whereObj[instructionSet.instructions[1].childKey] = _.intersection(whereObj[instructionSet.instructions[1].childKey], pkFilter);
+            }
+
             bufferChildCriteria.where = _.assign(whereObj, bufferChildCriteria.where);
 
             // Now find related child records
