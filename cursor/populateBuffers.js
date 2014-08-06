@@ -152,7 +152,7 @@ module.exports = function populateBuffers(options, cb) {
         else {
 
           childIdentity = instructionSet.instructions[0].child;
-          var criteriaToPopulateBuffer = _.cloneDeep(instructionSet.instructions[0].criteria);
+          var criteriaToPopulateBuffer = _.cloneDeep(instructionSet.instructions[0].criteria || {});
           var whereObj = {};
 
           switch (strategy) {
