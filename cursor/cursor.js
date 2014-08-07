@@ -97,11 +97,11 @@ Cursor.prototype.attachRecords = function attachRecords(cb) {
       // `buffer.attrName` for the parent record at this point, no matter what!
       // This is nice, because `buffer.records` is already sorted, limited, and
       // skipped, so we don't have to mess with that.
-      // 
-      if (buffer.records && buffer.records.length) { 
-        matchingParentRecord[buffer.attrName] = buffer.records;
+      //
+      if (buffer.records && buffer.records.length) {
+        matchingParentRecord[buffer.keyName] = buffer.records;
       } else {
-        matchingParentRecord[buffer.attrName] = null;
+        matchingParentRecord[buffer.keyName] = null;
       }
     }
 
@@ -109,7 +109,7 @@ Cursor.prototype.attachRecords = function attachRecords(cb) {
     // record (since unnecessary buffers and their `buffer.records` remain undefined
     // until set to save RAM) This is important for compatibility with WL1 core
     _.each(parentRecords, function (parentRecord) {
-      parentRecord[buffer.attrName] = parentRecord[buffer.attrName] || [];
+      parentRecord[buffer.keyName] = parentRecord[buffer.keyName] || [];
     });
 
   });

@@ -50,6 +50,7 @@ Buffer.prototype.add = function(values) {
       attrName: val.attrName,
       parentPkAttr: val.pkAttr,
       records: val.records,
+      keyName: val.keyName,
       belongsToPKValue: val.parentPK,
 
       // Optional (only used if implementing a HAS_FK strategy)
