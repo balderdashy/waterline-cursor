@@ -65,7 +65,7 @@ module.exports = function populateBuffers(options, cb) {
           }
 
           buffers.add(buffer);
-          nextParent();
+          async.setImmediate(nextParent);
         }, nextPop);
 
       }, next);
