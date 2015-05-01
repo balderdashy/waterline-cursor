@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "make test"
   },
   "keywords": [
     "waterline",
@@ -16,5 +16,15 @@
   "dependencies": {
     "async": "~0.9.0",
     "lodash": "~2.4.1"
+  },
+  "devDependencies": {
+    "async": "^0.9.0",
+    "jpath": "^0.0.20",
+    "lodash": "^2.4.1",
+    "mocha": "^2.2.4",
+    "npm": "^2.8.3",
+    "sails-disk": "balderdashy/sails-disk",
+    "sails-memory": "balderdashy/sails-memory",
+    "waterline-adapter-tests": "^0.10.10"
   }
 }
