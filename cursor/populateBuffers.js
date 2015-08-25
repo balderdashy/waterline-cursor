@@ -64,7 +64,10 @@ module.exports = function populateBuffers(options, cb) {
             buffer.parentFK = parent[instructions.instructions[population].instructions[0].parentKey];
           }
 
-          buffers.add(buffer);
+          // Makes sure that the foreign key is defined before adding the buffer
+          if (strategy !== strategies.HAS_FK || buffer.parentFK !== undefined) {
+            buffers.add(buffer);
+          }
           async.setImmediate(nextParent);
         }, nextPop);
 
