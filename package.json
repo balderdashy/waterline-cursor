@@ -14,8 +14,8 @@
   "author": "Mike McNeil",
   "license": "MIT",
   "dependencies": {
-    "async": "~0.9.0",
-    "lodash": "~2.4.1"
+    "async": "~1.4.0",
+    "lodash": "~3.10.0"
   },
   "devDependencies": {
     "async": "^0.9.0",
