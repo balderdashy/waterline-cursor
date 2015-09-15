@@ -81,7 +81,7 @@ Cursor.prototype.attachRecords = function attachRecords(cb) {
   _.each(bufferedRecords, function (buffer) {
 
     var matchingParentRecord = _.find(parentRecords, function (parentRecord) {
-      return parentRecord[buffer.parentPkAttr] === buffer.belongsToPKValue && !matchingParentRecord.found;
+      return parentRecord[buffer.parentPkAttr] === buffer.belongsToPKValue && !parentRecord.found;
     });
 
     // This should always be true, but checking just in case.
