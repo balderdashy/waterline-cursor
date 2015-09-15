@@ -81,11 +81,15 @@ Cursor.prototype.attachRecords = function attachRecords(cb) {
   _.each(bufferedRecords, function (buffer) {
 
     var matchingParentRecord = _.find(parentRecords, function (parentRecord) {
-      return parentRecord[buffer.parentPkAttr] === buffer.belongsToPKValue;
+      return parentRecord[buffer.parentPkAttr] === buffer.belongsToPKValue && !matchingParentRecord.found;
     });
 
     // This should always be true, but checking just in case.
     if (_.isObject(matchingParentRecord)) {
+	  // Once a matchingParentRecord is found, we need to mark it as such, so
+	  // that next iterations through the buffer will find the appropriate
+	  // subsequent matching rows instead of the first match over and over.
+	  matchingParentRecord.found = true;
 
       // If the value in `attrName` for this record is not an array,
       // it is probably a foreign key value.  Fortunately, at this point
