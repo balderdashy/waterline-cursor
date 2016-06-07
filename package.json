@@ -14,17 +14,19 @@
   "author": "Mike McNeil",
   "license": "MIT",
   "dependencies": {
-    "async": "~0.9.0",
-    "lodash": "~2.4.1"
+    "async": "1.5.2",
+    "lodash": "3.10.1"
   },
   "devDependencies": {
-    "async": "^0.9.0",
-    "jpath": "^0.0.20",
-    "lodash": "^2.4.1",
-    "mocha": "^2.2.4",
-    "npm": "^2.8.3",
+    "jpath": "0.0.20",
+    "mocha": "2.5.3",
+    "npm": "2.15.6",
     "sails-disk": "balderdashy/sails-disk",
     "sails-memory": "balderdashy/sails-memory",
-    "waterline-adapter-tests": "^0.10.10"
+    "waterline-adapter-tests": "~0.12.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/balderdashy/waterline-cursor.git"
   }
 }
