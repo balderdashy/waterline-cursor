@@ -7,11 +7,7 @@ Association / subquery helper.  Used by some database adapters for Sails/Waterli
 
 To report a bug, [click here](http://sailsjs.com/bugs).
 
-> This is a built-in module used in core database adapters in Sails and Waterline.
-
-#### Version notes
-
-The master branch of this repository holds `waterline-cursor` used in Sails versions 0.10.0 and up.  If you're looking for the version for the v0.9.x releases of Sails, the source is [located here](https://github.com/balderdashy/waterline-cursor/releases/tag/v0.9.7).
+> This is a built-in module within officially-supported database adapters for Sails and Waterline.
 
 ## Contributing &nbsp; [![Build Status](https://travis-ci.org/balderdashy/waterline-cursor.svg?branch=master)](https://travis-ci.org/balderdashy/waterline-cursor)
 
