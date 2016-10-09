@@ -19,11 +19,11 @@
   },
   "devDependencies": {
     "jpath": "0.0.20",
-    "mocha": "2.5.3",
+    "mocha": "3.0.2",
     "npm": "2.15.6",
-    "sails-disk": "balderdashy/sails-disk",
-    "sails-memory": "balderdashy/sails-memory",
-    "waterline-adapter-tests": "~0.12.0"
+    "sails-disk": "^0.10.10",
+    "sails-memory": "^0.10.7",
+    "waterline-adapter-tests": "^0.12.1"
   },
   "repository": {
     "type": "git",
