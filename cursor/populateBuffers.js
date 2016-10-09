@@ -40,7 +40,7 @@ module.exports = function populateBuffers(options, cb) {
     // Build child buffers.
     // For each instruction, loop through the parent records and build up a
     // buffer for the record.
-    buildChildBuffers: ['processParent', function(next, results) {
+    buildChildBuffers: ['processParent', function (resultsSoFar, next) {
       async.each(_.keys(instructions.instructions), function(population, nextPop) {
 
         var populationObject = instructions.instructions[population];
@@ -69,14 +69,14 @@ module.exports = function populateBuffers(options, cb) {
             buffers.add(buffer);
           }
           async.setImmediate(nextParent);
-        }, nextPop);
+        }, nextPop);//</async.eachSeries>
 
-      }, next);
+      }, next);//</async.each>
     }],
 
 
     // Process the child results and attach to the buffers
-    processChildren: ['buildChildBuffers', function(next, results) {
+    processChildren: ['buildChildBuffers', function (resultsSoFar, next) {
 
       // For each buffer build a query to populate it's children records.
       async.each(buffers.read(), function (buffer, next) {
@@ -180,7 +180,7 @@ module.exports = function populateBuffers(options, cb) {
           });
         }
 
-      }, next);
+      }, next);//</async.each>
     }]
 
   }, cb);
